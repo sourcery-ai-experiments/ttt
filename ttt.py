@@ -89,7 +89,6 @@ def switch_model(model):
     # If we catch up and the queue is zero, go back to medium. (normal)
     # THIS REQUIRES THE MODELS LOCALLY TO THIS FILE SINCE THEY WILL BE UPLOADED
     # FROM HERE.
-    return ()  # disabled for right now
     if model == "quick":
         files = {  #
             "model": (None, open("models/ggml-small.en-q5_1.bin", "rb")),
@@ -106,8 +105,7 @@ def import_notification_destinations():
     # line so that's hard to argue with
     import pandas as pd
 
-    destinations = pd.read_csv("destinations.csv", index_col=0).squeeze().to_dict()
-    return destinations
+    return pd.read_csv("destinations.csv", index_col=0).squeeze().to_dict()
 
 
 def main():
