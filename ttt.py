@@ -48,7 +48,12 @@ def transcribe_call(destinations):
             "response_format": (None, "json"),
         }
 
-        response = requests.post("http://10.0.1.200:8888/inference", files=files)
+        try:
+            response = requests.post("http://10.0.1.200:8888/inference", files=files)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred: {e}")
+
         calltext = response.text
 
         # Whisper seems to think radio conversation is a bit more colorful than it
@@ -91,13 +96,17 @@ def switch_model(model):
     # FROM HERE.
     if model == "quick":
         files = {  #
-            "model": (None, open("models/ggml-small.en-q5_1.bin", "rb")),
+            "model": (None, open("models/ggml-small.en.bin", "rb")),
         }
     else:
         files = {
-            "model": (None, open("models/ggml-medium.en-q5_0.bin", "rb")),
+            "model": (None, open("models/ggml-medium.en.bin", "rb")),
         }
-    requests.post("http://10.0.1.200:8888/load", files=files)
+
+    try:
+        requests.post("http://10.0.1.200:8888/load", files=files)
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
 
 
 def import_notification_destinations():
