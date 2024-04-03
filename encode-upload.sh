@@ -8,5 +8,5 @@ basename="${filename%.*}"
 audiofile="$basename.wav"
 json="$basename.json"
 
-cp "$json" media/transcribe/"$newname".json
-cp "$audiofile" media/transcribe/"$newname".wav
+cp "$json" media/transcribe/
+cp "$audiofile" media/transcribe/
