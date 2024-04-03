@@ -1,0 +1,3 @@
+pandas
+apprise
+better_profanity
