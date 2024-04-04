@@ -8,7 +8,6 @@ from pathlib import Path
 
 import apprise
 import requests
-from better_profanity import profanity
 
 
 def transcribe_call(destinations):
@@ -21,7 +20,6 @@ def transcribe_call(destinations):
     if not jsonlist:
         print("Empty queue. Sleep 5 seconds and check again.")
         time.sleep(5)
-        switch_model("normal")
         return ()
 
     for jsonfile in jsonlist:
@@ -34,37 +32,13 @@ def transcribe_call(destinations):
         calljson = jsonfile.read_text()
         calljson = json.loads(calljson)
 
-        # Check if we are running behind
-        queue_time = float(datetime.now().timestamp()) - calljson["start_time"]
-        if queue_time > 180:
-            print("Queue exceeds 3 minutes")
-            switch_model("quick")
-
-        # Now send the files over to whisper for transcribing
-        files = {
-            "file": (None, audiofile.read_bytes()),
-            "temperature": (None, "0.0"),
-            "temperature_inc": (None, "0.2"),
-            "response_format": (None, "json"),
-        }
-
-        try:
-            response = requests.post("http://10.0.1.200:8888/inference", files=files)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"An error occurred: {e}")
-
-        calltext = response.text
-
-        # Whisper seems to think radio conversation is a bit more colorful than it
-        # normally is.  Let's try and make it more PG
-        calltext = profanity.censor(calltext)
-
-        # Load the json from whisper into a json/dict
-        calltext = json.loads(calltext)
-
-        # And now merge that dict into calljson so [text] in calljson is the transcript
-        calljson = {**calljson, **calltext}
+        # Send the json and audiofile to a function to transcribe
+        # If TTT_DEEPGRAM_KEY is set, use deepgram, else whispercpp
+        deepgram_key = os.environ.get("TTT_DEEPGRAM_KEY", None)
+        if deepgram_key is not None:
+            calljson = transcribe_deepgram(calljson, audiofile)
+        else:
+            calljson = transcribe_whispercpp(calljson, audiofile)
 
         # Ok, we have text back, send for notification
         send_notifications(calljson, destinations)
@@ -74,39 +48,85 @@ def transcribe_call(destinations):
         Path.unlink(audiofile)
 
 
-def send_notifications(calljson, destinations):
-    talkgroup_description = calljson["talkgroup_description"]
-    talkgroup = calljson["talkgroup"]
-    compiledcall = calljson["text"]
+def transcribe_whispercpp(calljson, audiofile):
+    # Check if we are running behind
+    queue_time = float(datetime.now().timestamp()) - calljson["start_time"]
+    if queue_time > 180:
+        print("Queue exceeds 3 minutes")
+        # switch_model("quick")
 
+    # Now send the files over to whisper for transcribing
+    files = {
+        "file": (None, audiofile.read_bytes()),
+        "temperature": (None, "0.0"),
+        "temperature_inc": (None, "0.2"),
+        "response_format": (None, "json"),
+    }
+
+    try:
+        response = requests.post("http://10.0.1.200:8888/inference", files=files)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+
+    calltext = response.json()
+
+    # And now merge that dict into calljson so [text] in calljson is the transcript
+    calljson = {**calljson, **calltext}
+    return calljson
+
+
+def transcribe_deepgram(calljson, audiofile):
+    deepgram_key = os.environ.get("TTT_DEEPGRAM_KEY")
+    headers = {
+        "Authorization": f"Token {deepgram_key}",
+        "Content-Type": "audio/wav",
+    }
+    params = {
+        "model": "nova-2-phonecall",
+        "smart_format": "true",
+        "numerals": "true",
+    }
+
+    data = audiofile.read_bytes()
+    try:
+        response = requests.post(
+            "https://api.deepgram.com/v1/listen",
+            params=params,
+            headers=headers,
+            data=data,
+        )
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+
+    json = response.json()
+
+    # We take the json returned from deepgram and pull out the "transcript"
+    # then tack it onto the calljson dict as "text" which is what whisper
+    # normally uses
+    calltext = json["results"]["channels"][0]["alternatives"][0]["transcript"]
+    calljson["text"] = calltext
+    return calljson
+
+
+def send_notifications(calljson, destinations):
+    body = calljson["text"]
+    title = (
+        calljson["talkgroup_description"]
+        + " @ "
+        + str(datetime.fromtimestamp(calljson["start_time"]))
+    )
+
+    talkgroup = calljson["talkgroup"]
     notify_url = destinations[talkgroup]
 
     apobj = apprise.Apprise()
     apobj.add(notify_url)
     apobj.notify(
-        body=compiledcall,
-        title=talkgroup_description,
+        body=body,
+        title=title,
     )
-
-
-def switch_model(model):
-    # If we're running behind, switch to the small model (quick)
-    # If we catch up and the queue is zero, go back to medium. (normal)
-    # THIS REQUIRES THE MODELS LOCALLY TO THIS FILE SINCE THEY WILL BE UPLOADED
-    # FROM HERE.
-    if model == "quick":
-        files = {
-            "model": (None, "models/ggml-small.en.bin"),
-        }
-    else:
-        files = {
-            "model": (None, "models/ggml-medium.en.bin"),
-        }
-
-    try:
-        requests.post("http://10.0.1.200:8888/load", files=files)
-    except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
 
 
 def import_notification_destinations():
@@ -118,7 +138,6 @@ def import_notification_destinations():
 
 
 def main():
-    profanity.load_censor_words()
     destinations = import_notification_destinations()
     while 1:
         transcribe_call(destinations)
