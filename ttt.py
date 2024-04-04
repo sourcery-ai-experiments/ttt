@@ -95,12 +95,12 @@ def switch_model(model):
     # THIS REQUIRES THE MODELS LOCALLY TO THIS FILE SINCE THEY WILL BE UPLOADED
     # FROM HERE.
     if model == "quick":
-        files = {  #
-            "model": (None, open("models/ggml-small.en.bin", "rb")),
+        files = {
+            "model": (None, "models/ggml-small.en.bin"),
         }
     else:
         files = {
-            "model": (None, open("models/ggml-medium.en.bin", "rb")),
+            "model": (None, "models/ggml-medium.en.bin"),
         }
 
     try:
