@@ -79,7 +79,7 @@ def transcribe_whispercpp(calljson, audiofile):
 def transcribe_deepgram(calljson, audiofile):
     deepgram_key = os.environ.get("TTT_DEEPGRAM_KEY")
     headers = {
-        "Authorization": "Token " + deepgram_key,
+        "Authorization": f"Token {deepgram_key}",
         "Content-Type": "audio/wav",
     }
     params = {
@@ -111,17 +111,21 @@ def transcribe_deepgram(calljson, audiofile):
 
 
 def send_notifications(calljson, destinations):
-    talkgroup_description = calljson["talkgroup_description"]
-    talkgroup = calljson["talkgroup"]
-    compiledcall = calljson["text"]
+    body = calljson["text"]
+    title = (
+        calljson["talkgroup_description"]
+        + " @ "
+        + str(datetime.fromtimestamp(calljson["start_time"]))
+    )
 
+    talkgroup = calljson["talkgroup"]
     notify_url = destinations[talkgroup]
 
     apobj = apprise.Apprise()
     apobj.add(notify_url)
     apobj.notify(
-        body=compiledcall,
-        title=talkgroup_description,
+        body=body,
+        title=title,
     )
 
 
