@@ -49,11 +49,12 @@ def transcribe_call(destinations):
 
 
 def transcribe_whispercpp(calljson, audiofile):
+    whisper_url = os.environ.get("TTT_WHISPERCPP_URL", "http://whisper:8080")
+
     # Check if we are running behind
     queue_time = float(datetime.now().timestamp()) - calljson["start_time"]
     if queue_time > 180:
         print("Queue exceeds 3 minutes")
-        # switch_model("quick")
 
     # Now send the files over to whisper for transcribing
     files = {
@@ -64,10 +65,11 @@ def transcribe_whispercpp(calljson, audiofile):
     }
 
     try:
-        response = requests.post("http://10.0.1.200:8888/inference", files=files)
+        response = requests.post(f"{whisper_url}/inference", files=files)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
+        raise Exception("A request error occurred.")
 
     calltext = response.json()
 
@@ -99,6 +101,7 @@ def transcribe_deepgram(calljson, audiofile):
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
+        return
 
     json = response.json()
 
