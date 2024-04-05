@@ -34,8 +34,8 @@ def transcribe_call(destinations):
 
         # Send the json and audiofile to a function to transcribe
         # If TTT_DEEPGRAM_KEY is set, use deepgram, else whispercpp
-        deepgram_key = os.environ.get("TTT_DEEPGRAM_KEY", None)
-        if deepgram_key is not None:
+        deepgram_key = os.environ.get("TTT_DEEPGRAM_KEY", False)
+        if deepgram_key:
             calljson = transcribe_deepgram(calljson, audiofile)
         else:
             calljson = transcribe_whispercpp(calljson, audiofile)
