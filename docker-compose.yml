@@ -1,0 +1,13 @@
+services:
+  ttt:
+      image: ghcr.io/jquagga/ttt:main
+      container_name: ttt
+      hostname: ttt
+      restart: unless-stopped
+      volumes:
+        - ../trunk-recorder-config/media/transcribe:/app/media/transcribe
+        - ./destinations.csv:/app/destinations.csv:ro
+      user: "1000"
+      environment:
+        - TTT_WHISPERCPP_URL=${TTT_WHISPERCPP_URL}
+        - TTT_DEEPGRAM_KEY=${TTT_DEEPGRAM_KEY}
