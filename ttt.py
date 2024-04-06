@@ -67,7 +67,7 @@ def transcribe_whispercpp(calljson, audiofile):
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
-        raise Exception("A request error occurred.")
+        raise Exception("A request error occurred.") from e
 
     calltext = response.json()
 
