@@ -168,7 +168,7 @@ def import_notification_destinations():
     import csv
 
     destinations = {}
-    with open("csv_file.csv", mode="r") as inp:
+    with open("destinations.csv", mode="r") as inp:
         reader = csv.reader(inp)
         destinations = {rows[0]: rows[1] for rows in reader}
 
