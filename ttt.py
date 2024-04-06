@@ -8,6 +8,7 @@ from pathlib import Path
 
 import apprise
 import requests
+import scrubadub
 from faster_whisper import WhisperModel
 
 
@@ -98,8 +99,6 @@ def transcribe_fasterwhisper(calljson, audiofile):
         beam_size=5,
         vad_filter=vad_filter,
         vad_parameters=dict(min_silence_duration_ms=500),
-        condition_on_previous_text=False,
-        language="en",
     )
 
     calltext = "".join(segment.text for segment in segments)
@@ -145,7 +144,9 @@ def transcribe_deepgram(calljson, audiofile):
 
 
 def send_notifications(calljson, destinations):
-    body = calljson["text"]
+    # Scrubadub redacts PII let's try and clean the text before
+    # goes out the door
+    body = scrubadub.clean(calljson["text"])
     title = (
         calljson["talkgroup_description"]
         + " @ "
@@ -164,11 +165,14 @@ def send_notifications(calljson, destinations):
 
 
 def import_notification_destinations():
-    # I didn't really want to add a pandas dependency, but it did what I want in one
-    # line so that's hard to argue with
-    import pandas as pd
+    import csv
 
-    return pd.read_csv("destinations.csv", index_col=0).squeeze().to_dict()
+with open("destinations.csv", mode="r") as inp:
+    reader = csv.reader(inp)
+    destinations = {}
+    for rows in reader:
+        if len(rows) >= 2:
+            destinations[rows[0]] = rows[1]
 
 
 def main():
