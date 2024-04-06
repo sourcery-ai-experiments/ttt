@@ -169,14 +169,7 @@ def import_notification_destinations():
 
     with open("destinations.csv", mode="r") as inp:
         reader = csv.reader(inp)
-        destinations = {}
-        for rows in reader:
-            if len(rows) >= 2:
-if len(rows) == 2:
-    destinations[rows[0]] = rows[1]
-elif len(rows) > 2:
-    destinations[rows[0]] = rows[1]
-    # Consider logging a warning about extra columns
+        destinations = {rows[0]: rows[1] for rows in reader if len(rows) >= 2}
     return destinations
 
 
