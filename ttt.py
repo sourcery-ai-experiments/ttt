@@ -8,6 +8,7 @@ from pathlib import Path
 
 import apprise
 import requests
+from faster_whisper import WhisperModel
 
 
 def transcribe_call(destinations):
@@ -77,8 +78,6 @@ def transcribe_whispercpp(calljson, audiofile):
 
 
 def transcribe_fasterwhisper(calljson, audiofile):
-    from faster_whisper import WhisperModel
-
     model_size = os.environ.get(
         "TTT_FASTERWHISPER_MODEL_SIZE", "Systran/faster-distil-whisper-large-v3"
     )
@@ -92,7 +91,7 @@ def transcribe_fasterwhisper(calljson, audiofile):
 
     # This whisper wants the path, not bytes but we need to cast it from pathlib to str
     audiofile = str(audiofile)
-    # We are going to set the vad parameters to half a second although env varible still turns
+    # We are going to set the vad parameters to half a second although env variable still turns
     # vad off or on globally
     segments, info = model.transcribe(
         audiofile,
