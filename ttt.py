@@ -153,7 +153,7 @@ def send_notifications(calljson, destinations):
         + str(datetime.fromtimestamp(calljson["start_time"]))
     )
 
-    talkgroup = calljson["talkgroup"]
+    talkgroup = str(calljson["talkgroup"])
     notify_url = destinations[talkgroup]
 
     apobj = apprise.Apprise()
