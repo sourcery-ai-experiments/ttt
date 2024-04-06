@@ -99,7 +99,6 @@ def transcribe_fasterwhisper(calljson, audiofile):
         beam_size=5,
         vad_filter=vad_filter,
         vad_parameters=dict(min_silence_duration_ms=500),
-        condition_on_previous_text=False,
     )
 
     calltext = "".join(segment.text for segment in segments)
