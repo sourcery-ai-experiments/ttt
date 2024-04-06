@@ -172,7 +172,11 @@ def import_notification_destinations():
         destinations = {}
         for rows in reader:
             if len(rows) >= 2:
-                destinations[rows[0]] = rows[1]
+if len(rows) == 2:
+    destinations[rows[0]] = rows[1]
+elif len(rows) > 2:
+    destinations[rows[0]] = rows[1]
+    # Consider logging a warning about extra columns
     return destinations
 
 
