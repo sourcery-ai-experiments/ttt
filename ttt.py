@@ -33,11 +33,15 @@ def transcribe_call(destinations):
         calljson = json.loads(calljson)
 
         # Send the json and audiofile to a function to transcribe
-        # If TTT_DEEPGRAM_KEY is set, use deepgram, else whispercpp
-        if deepgram_key := os.environ.get("TTT_DEEPGRAM_KEY", False):
+        # If TTT_DEEPGRAM_KEY is set, use deepgram, else
+        # if TTT_WHISPER_URL is set, use whisper.cpp else
+        # fasterwhisper deepgram_key := whispercpp_url :=
+        if os.environ.get("TTT_DEEPGRAM_KEY", False):
             calljson = transcribe_deepgram(calljson, audiofile)
-        else:
+        elif os.environ.get("TTT_WHISPERCPP_URL", False):
             calljson = transcribe_whispercpp(calljson, audiofile)
+        else:
+            calljson = transcribe_fasterwhisper(calljson, audiofile)
 
         # Ok, we have text back, send for notification
         send_notifications(calljson, destinations)
@@ -49,11 +53,6 @@ def transcribe_call(destinations):
 
 def transcribe_whispercpp(calljson, audiofile):
     whisper_url = os.environ.get("TTT_WHISPERCPP_URL", "http://whisper:8080")
-
-    # Check if we are running behind
-    queue_time = float(datetime.now().timestamp()) - calljson["start_time"]
-    if queue_time > 180:
-        print("Queue exceeds 3 minutes")
 
     # Now send the files over to whisper for transcribing
     files = {
@@ -74,6 +73,35 @@ def transcribe_whispercpp(calljson, audiofile):
 
     # And now merge that dict into calljson so [text] in calljson is the transcript
     calljson = {**calljson, **calltext}
+    return calljson
+
+
+def transcribe_fasterwhisper(calljson, audiofile):
+    from faster_whisper import WhisperModel
+
+    model_size = os.environ.get("TTT_FASTERWHISPER_MODEL", "distil-large-v3")
+    # model_size = "distil-large-v3"
+
+    # Run on GPU with FP16
+    # model = WhisperModel(model_size, device="cuda",
+    # compute_type="float16", download_root="models")
+
+    # or run on GPU with INT8
+    # model = WhisperModel(model_size, device="cuda",
+    # compute_type="int8_float16", download_root="models")
+    # or run on CPU with INT8
+    model = WhisperModel(
+        model_size, device="cpu", compute_type="int8", download_root="models"
+    )
+
+    # This whisper wants the path, not bytes but we need to cast it from pathlib to str
+    audiofile = str(audiofile)
+    segments, info = model.transcribe(audiofile, beam_size=5, vad_filter=True)
+
+    calltext = "".join(segment.text for segment in segments)
+
+    calljson["text"] = calltext
+
     return calljson
 
 
