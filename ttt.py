@@ -79,24 +79,20 @@ def transcribe_whispercpp(calljson, audiofile):
 def transcribe_fasterwhisper(calljson, audiofile):
     from faster_whisper import WhisperModel
 
-    model_size = os.environ.get("TTT_FASTERWHISPER_MODEL", "distil-large-v3")
-    # model_size = "distil-large-v3"
+    model_size = os.environ.get(
+        "TTT_FASTERWHISPER_MODEL_SIZE", "Systran/faster-distil-whisper-large-v3"
+    )
+    device = os.environ.get("TTT_FASTERWHISPER_DEVICE", "cpu")
+    compute_type = os.environ.get("TTT_FASTERWHISPER_COMPUTE_TYPE", "int8")
+    vad_filter = os.environ.get("TTT_FASTERWHISPER_VAD_FILTER", False)
 
-    # Run on GPU with FP16
-    # model = WhisperModel(model_size, device="cuda",
-    # compute_type="float16", download_root="models")
-
-    # or run on GPU with INT8
-    # model = WhisperModel(model_size, device="cuda",
-    # compute_type="int8_float16", download_root="models")
-    # or run on CPU with INT8
     model = WhisperModel(
-        model_size, device="cpu", compute_type="int8", download_root="models"
+        model_size, device=device, compute_type=compute_type, download_root="models"
     )
 
     # This whisper wants the path, not bytes but we need to cast it from pathlib to str
     audiofile = str(audiofile)
-    segments, info = model.transcribe(audiofile, beam_size=5, vad_filter=True)
+    segments, info = model.transcribe(audiofile, beam_size=5, vad_filter=vad_filter)
 
     calltext = "".join(segment.text for segment in segments)
 
