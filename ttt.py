@@ -166,14 +166,12 @@ def send_notifications(calljson, destinations):
 
 def import_notification_destinations():
     import csv
-
-with open("destinations.csv", mode="r") as inp:
-    reader = csv.reader(inp)
-    destinations = {}
-    for rows in reader:
-        if len(rows) >= 2:
-            destinations[rows[0]] = rows[1]
-
+    with open("destinations.csv", mode="r") as inp:
+        reader = csv.reader(inp)
+        destinations = {}
+        for rows in reader:
+            if len(rows) >= 2:
+                destinations[rows[0]] = rows[1]
 
 def main():
     destinations = import_notification_destinations()
