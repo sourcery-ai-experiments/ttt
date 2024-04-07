@@ -14,4 +14,5 @@ FROM gcr.io/distroless/python3-debian12:nonroot@sha256:538f54b8d704c29137d337aea
 COPY --from=build /venv /venv
 WORKDIR /app
 COPY ttt.py /app
+ENV LD_LIBRARY_PATH=`python3 -c 'import os; import nvidia.cublas.lib; import nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))'`
 ENTRYPOINT ["/venv/bin/python3","-u","/app/ttt.py"]
