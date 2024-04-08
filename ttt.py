@@ -80,7 +80,7 @@ def transcribe_whispercpp(calljson, audiofile):
 
 def transcribe_fasterwhisper(calljson, audiofile):
     model_size = os.environ.get(
-        "TTT_FASTERWHISPER_MODEL_SIZE", "Systran/faster-distil-whisper-large-v3"
+        "TTT_FASTERWHISPER_MODEL_SIZE", "Systran/faster-distil-whisper-large-v2"
     )
     device = os.environ.get("TTT_FASTERWHISPER_DEVICE", "auto")
     compute_type = os.environ.get("TTT_FASTERWHISPER_COMPUTE_TYPE", "auto")
@@ -101,6 +101,9 @@ def transcribe_fasterwhisper(calljson, audiofile):
         vad_filter=vad_filter,
         vad_parameters=dict(min_silence_duration_ms=500),
         language=language,
+        # This enhances distil models but is not required for "normal"
+        # Without it, distil models are bonkers.
+        condition_on_previous_text=False
     )
 
     calltext = "".join(segment.text for segment in segments)
