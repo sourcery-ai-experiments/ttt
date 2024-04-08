@@ -103,7 +103,7 @@ def transcribe_fasterwhisper(calljson, audiofile):
         language=language,
         # This enhances distil models but is not required for "normal"
         # Without it, distil models are bonkers.
-        condition_on_previous_text=False
+        condition_on_previous_text=False,
     )
 
     calltext = "".join(segment.text for segment in segments)
