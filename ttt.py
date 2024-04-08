@@ -85,6 +85,7 @@ def transcribe_fasterwhisper(calljson, audiofile):
     device = os.environ.get("TTT_FASTERWHISPER_DEVICE", "auto")
     compute_type = os.environ.get("TTT_FASTERWHISPER_COMPUTE_TYPE", "auto")
     vad_filter = os.environ.get("TTT_FASTERWHISPER_VAD_FILTER", False)
+    language = os.environ.get("TTT_FASTERWHISPER_LANGUAGE", None)
 
     model = WhisperModel(
         model_size, device=device, compute_type=compute_type, download_root="models"
