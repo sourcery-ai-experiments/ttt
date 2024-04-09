@@ -82,8 +82,8 @@ def transcribe_fasterwhisper(calljson, audiofile):
     model_size = os.environ.get(
         "TTT_FASTERWHISPER_MODEL_SIZE", "Systran/faster-distil-whisper-large-v3"
     )
-    device = os.environ.get("TTT_FASTERWHISPER_DEVICE", "cpu")
-    compute_type = os.environ.get("TTT_FASTERWHISPER_COMPUTE_TYPE", "int8")
+    device = os.environ.get("TTT_FASTERWHISPER_DEVICE", "auto")
+    compute_type = os.environ.get("TTT_FASTERWHISPER_COMPUTE_TYPE", "auto")
     vad_filter = os.environ.get("TTT_FASTERWHISPER_VAD_FILTER", False)
 
     model = WhisperModel(
@@ -146,7 +146,7 @@ def transcribe_deepgram(calljson, audiofile):
 def send_notifications(calljson, destinations):
     # Scrubadub redacts PII let's try and clean the text before
     # goes out the door
-    body = scrubadub.clean(calljson["text"])
+    body = scrubber.clean(calljson["text"])
     title = (
         calljson["talkgroup_description"]
         + " @ "
@@ -176,7 +176,14 @@ def import_notification_destinations():
 
 
 def main():
+    # Import the apprise destinations to send calls
     destinations = import_notification_destinations()
+
+    # Scrubber is used to theoretically limit some private data going out
+    # but it's a bit too aggressive with emails so turn that off.
+    scrubber = scrubadub.Scrubber()
+    scrubber.remove_detector('email')
+
     while 1:
         transcribe_call(destinations)
 
