@@ -8,6 +8,7 @@ from pathlib import Path
 
 import apprise
 import requests
+from faster_whisper import WhisperModel
 
 
 def transcribe_call(destinations):
@@ -35,7 +36,7 @@ def transcribe_call(destinations):
         # Send the json and audiofile to a function to transcribe
         # If TTT_DEEPGRAM_KEY is set, use deepgram, else
         # if TTT_WHISPER_URL is set, use whisper.cpp else
-        # fasterwhisper deepgram_key := whispercpp_url :=
+        # fasterwhisper
         if os.environ.get("TTT_DEEPGRAM_KEY", False):
             calljson = transcribe_deepgram(calljson, audiofile)
         elif os.environ.get("TTT_WHISPERCPP_URL", False):
@@ -77,8 +78,6 @@ def transcribe_whispercpp(calljson, audiofile):
 
 
 def transcribe_fasterwhisper(calljson, audiofile):
-    from faster_whisper import WhisperModel
-
     model_size = os.environ.get(
         "TTT_FASTERWHISPER_MODEL_SIZE", "Systran/faster-distil-whisper-large-v3"
     )
@@ -92,7 +91,16 @@ def transcribe_fasterwhisper(calljson, audiofile):
 
     # This whisper wants the path, not bytes but we need to cast it from pathlib to str
     audiofile = str(audiofile)
-    segments, info = model.transcribe(audiofile, beam_size=5, vad_filter=vad_filter)
+    # We are going to set the vad parameters to half a second although env variable still turns
+    # vad off or on globally
+    segments, info = model.transcribe(
+        audiofile,
+        beam_size=5,
+        vad_filter=vad_filter,
+        vad_parameters=dict(min_silence_duration_ms=500),
+        condition_on_previous_text=False,
+        language="en",
+    )
 
     calltext = "".join(segment.text for segment in segments)
 
