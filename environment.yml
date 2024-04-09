@@ -4,7 +4,6 @@ channels:
   - pytorch
   - nvidia
 dependencies:
-  - git
   - python=3.12
   - apprise
   - pip
