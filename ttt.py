@@ -9,7 +9,8 @@ from pathlib import Path
 import apprise
 import requests
 import scrubadub
-from faster_whisper import WhisperModel
+import torch
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 
 def transcribe_call(destinations):
@@ -43,7 +44,7 @@ def transcribe_call(destinations):
         elif os.environ.get("TTT_WHISPERCPP_URL", False):
             calljson = transcribe_whispercpp(calljson, audiofile)
         else:
-            calljson = transcribe_fasterwhisper(calljson, audiofile)
+            calljson = transcribe_transformers(calljson, audiofile)
 
         # Ok, we have text back, send for notification
         send_notifications(calljson, destinations)
@@ -78,38 +79,36 @@ def transcribe_whispercpp(calljson, audiofile):
     return calljson
 
 
-def transcribe_fasterwhisper(calljson, audiofile):
-    model_size = os.environ.get(
-        "TTT_FASTERWHISPER_MODEL_SIZE", "Systran/faster-distil-whisper-large-v2"
-    )
-    device = os.environ.get("TTT_FASTERWHISPER_DEVICE", "auto")
-    compute_type = os.environ.get("TTT_FASTERWHISPER_COMPUTE_TYPE", "auto")
-    vad_filter = os.environ.get("TTT_FASTERWHISPER_VAD_FILTER", False)
-    language = os.environ.get("TTT_FASTERWHISPER_LANGUAGE", None)
-
-    model = WhisperModel(
-        model_size, device=device, compute_type=compute_type, download_root="models"
-    )
-
-    # This whisper wants the path, not bytes but we need to cast it from pathlib to str
+def transcribe_transformers(calljson, audiofile):
     audiofile = str(audiofile)
-    # We are going to set the vad parameters to half a second although env variable still turns
-    # vad off or on globally
-    segments, info = model.transcribe(
-        audiofile,
-        beam_size=5,
-        vad_filter=vad_filter,
-        vad_parameters=dict(min_silence_duration_ms=500),
-        language=language,
-        # This enhances distil models but is not required for "normal"
-        # Without it, distil models are bonkers.
-        condition_on_previous_text=False,
+
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
+    model_id = "distil-whisper/distil-large-v3"
+
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_id,
+        torch_dtype=torch_dtype,
+        low_cpu_mem_usage=True,
+        use_safetensors=True,
+    )
+    model.to(device)
+
+    processor = AutoProcessor.from_pretrained(model_id)
+
+    pipe = pipeline(
+        "automatic-speech-recognition",
+        model=model,
+        tokenizer=processor.tokenizer,
+        feature_extractor=processor.feature_extractor,
+        max_new_tokens=128,
+        torch_dtype=torch_dtype,
+        device=device,
     )
 
-    calltext = "".join(segment.text for segment in segments)
-
-    calljson["text"] = calltext
-
+    result = pipe(audiofile)
+    calljson["text"] = result["text"]
     return calljson
 
 

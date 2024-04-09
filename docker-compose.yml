@@ -1,20 +1,16 @@
 services:
   ttt:
-      image: ghcr.io/jquagga/ttt:main
+      image: ghcr.io/jquagga/ttt:main 
       container_name: ttt
       hostname: ttt
       restart: unless-stopped
       volumes:
         - ./media/transcribe:/app/media/transcribe
         - ./destinations.csv:/app/destinations.csv:ro
-        - ./models:/app/models #faster_whisper models
+        - ./models:/app/models
+        #- /etc/timezone:/etc/timezone:ro
+        - /etc/localtime:/etc/localtime:ro
       user: "1000"
       environment:
-        - TZ=America/New_York
         #- TTT_WHISPERCPP_URL=${TTT_WHISPERCPP_URL}
-        #- TTT_DEEPGRAM_KEY=${TTT_DEEPGRAM_KEY}
-        - TTT_FASTERWHISPER_MODEL_SIZE=${TTT_FASTERWHISPER_MODEL_SIZE}
-        - TTT_FASTERWHISPER_VAD_FILTER=${TTT_FASTERWHISPER_VAD_FILTER}
-        - TTT_FASTERWHISPER_DEVICE=${TTT_FASTERWHISPER_DEVICE}
-        - TTT_FASTERWHISPER_COMPUTE_TYPE=${TTT_FASTERWHISPER_COMPUTE_TYPE}
-        - TTT_FASTERWHISPER_LANGUAGE=${TTT_FASTERWHISPER_LANGUAGE}
+        - HF_HOME=models
