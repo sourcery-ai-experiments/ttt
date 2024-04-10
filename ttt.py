@@ -14,6 +14,21 @@ from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 
 def transcribe_call(destinations):
+    """Transcribes audio files and sends notifications.
+
+    Args:
+        destinations (dict): A dictionary containing destination information.
+
+    Returns:
+        None
+
+    Explanation:
+        This function searches for JSON files in the "media/transcribe" directory, sorts them by creation time,
+        and transcribes the corresponding audio files. The transcription is performed using different methods
+        based on the environment variables set. After transcribing, the function sends notifications using the
+        transcribed text. Finally, the JSON and audio files are deleted.
+
+    """
     # First lets search the media directory for all json, sorted by creation time
     jsonlist = sorted(
         Path("media/transcribe").rglob("*.[jJ][sS][oO][nN]"), key=os.path.getctime
@@ -55,6 +70,20 @@ def transcribe_call(destinations):
 
 
 def transcribe_whispercpp(calljson, audiofile):
+    """Transcribes audio file using whisper.cpp.
+
+    Args:
+        calljson (dict): A dictionary containing the JSON data.
+        audiofile (Path): The path to the audio file.
+
+    Returns:
+        dict: The updated calljson dictionary with the transcript.
+
+    Explanation:
+        This function sends the audio file to whisper.cpp for transcription. It constructs a multipart/form-data
+        request with the audio file and other parameters. The response from whisper.cpp is parsed as JSON and
+        merged into the calljson dictionary. The updated calljson dictionary is then returned.
+    """
     whisper_url = os.environ.get("TTT_WHISPERCPP_URL", "http://whisper:8080")
 
     # Now send the files over to whisper for transcribing
@@ -82,6 +111,20 @@ def transcribe_whispercpp(calljson, audiofile):
 
 
 def transcribe_transformers(calljson, audiofile):
+    """Transcribes audio file using transformers library.
+
+    Args:
+        calljson (dict): A dictionary containing the JSON data.
+        audiofile (str): The path to the audio file.
+
+    Returns:
+        dict: The updated calljson dictionary with the transcript.
+
+    Explanation:
+        This function transcribes the audio file using the transformers library. It loads a pre-trained model
+        and processor, creates a pipeline for automatic speech recognition, and processes the audio file.
+        The resulting transcript is added to the calljson dictionary and returned.
+    """
     audiofile = str(audiofile)
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -115,6 +158,21 @@ def transcribe_transformers(calljson, audiofile):
 
 
 def transcribe_deepgram(calljson, audiofile):
+    """Transcribes audio file using Deepgram API.
+
+    Args:
+        calljson (dict): A dictionary containing the JSON data.
+        audiofile (Path): The path to the audio file.
+
+    Returns:
+        dict: The updated calljson dictionary with the transcript.
+
+    Explanation:
+        This function sends the audio file to the Deepgram API for transcription. It constructs a POST request
+        with the audio file and necessary headers. The response from Deepgram is parsed as JSON, and the
+        transcript is extracted and added to the calljson dictionary. The updated calljson dictionary is then
+        returned.
+    """
     deepgram_key = os.environ.get("TTT_DEEPGRAM_KEY")
     headers = {
         "Authorization": f"Token {deepgram_key}",
@@ -150,6 +208,21 @@ def transcribe_deepgram(calljson, audiofile):
 
 
 def send_notifications(calljson, destinations):
+    """Sends notifications with transcribed text.
+
+    Args:
+        calljson (dict): A dictionary containing the call information.
+        destinations (dict): A dictionary containing destination URLs.
+
+    Returns:
+        None
+
+    Explanation:
+        This function cleans the transcribed text using the scrubadub library to remove personally identifiable
+        information (PII). It constructs a notification title based on the call information and sends the cleaned
+        text as the notification body. The notification is sent to the specified destination URLs using the
+        apprise library.
+    """
     # Scrubadub redacts PII let's try and clean the text before
     # goes out the door
     scrubber = scrubadub.Scrubber()
@@ -174,6 +247,18 @@ def send_notifications(calljson, destinations):
 
 
 def import_notification_destinations():
+    """Imports notification destinations from a CSV file.
+
+    Returns:
+        dict: A dictionary containing the notification destinations.
+
+    Explanation:
+        This function reads a CSV file containing notification destinations. Each row in the CSV file represents
+        a destination, with the first column as the key, the second column as the sub-key, and the third column
+        as the value. The function constructs a dictionary where the keys are the values from the first column,
+        and the values are nested dictionaries with the sub-keys and values from the second and third columns,
+        respectively. The resulting dictionary is returned.
+    """
     import csv
 
     destinations = {}
@@ -190,6 +275,16 @@ def import_notification_destinations():
 
 
 def main():
+    """Main entry point of the application.
+
+    Returns:
+        None
+
+    Explanation:
+        This function serves as the main loop of the application. It imports notification destinations using
+        the `import_notification_destinations` function and continuously calls the `transcribe_call` function
+        with the imported destinations. The loop runs indefinitely until the program is terminated.
+    """
     # Import the apprise destinations to send calls
     destinations = import_notification_destinations()
 
