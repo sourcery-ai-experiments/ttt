@@ -146,7 +146,9 @@ def transcribe_deepgram(calljson, audiofile):
 def send_notifications(calljson, destinations):
     # Scrubadub redacts PII let's try and clean the text before
     # goes out the door
-    body = scrubadub.clean(calljson["text"])
+    scrubber = scrubadub.Scrubber()
+    scrubber.remove_detector('email')
+    body = scrubber.clean(calljson["text"])
     title = (
         calljson["talkgroup_description"]
         + " @ "
