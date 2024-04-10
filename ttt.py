@@ -69,8 +69,10 @@ def transcribe_whispercpp(calljson, audiofile):
         response = requests.post(f"{whisper_url}/inference", files=files)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
-        raise Exception("A request error occurred.") from e
+        print(f"A request error occurred while trying to post to whisper.cpp: {e}")
+        raise RuntimeError(
+            "A request error occurred while trying to post to whisper.cpp."
+        ) from e
 
     calltext = response.json()
 
@@ -132,8 +134,10 @@ def transcribe_deepgram(calljson, audiofile):
         )
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
-        return
+        print(f"A request error occurred while trying to post to Deepgram: {e}")
+        raise RuntimeError(
+            "A request error occurred while trying to post to Deepgram."
+        ) from e
 
     json = response.json()
 
@@ -157,8 +161,9 @@ def send_notifications(calljson, destinations):
         + str(datetime.fromtimestamp(calljson["start_time"]))
     )
 
+    short_name = str(calljson["short_name"])
     talkgroup = str(calljson["talkgroup"])
-    notify_url = destinations[talkgroup]
+    notify_url = destinations[short_name][talkgroup]
 
     apobj = apprise.Apprise()
     apobj.add(notify_url)
@@ -172,9 +177,14 @@ def import_notification_destinations():
     import csv
 
     destinations = {}
-    with open("destinations.csv", mode="r") as inp:
+    with open("destinations.csv", newline="") as inp:
         reader = csv.reader(inp)
-        destinations = {rows[0]: rows[1] for rows in reader}
+        next(reader, None)  # skip the headers
+        for row in reader:
+            if row[0] in destinations:
+                destinations[row[0]][row[1]] = row[2]
+            else:
+                destinations[row[0]] = {row[1]: row[2]}
 
     return destinations
 
