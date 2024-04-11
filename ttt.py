@@ -179,7 +179,9 @@ def transcribe_deepgram(calljson, audiofile):
         "Content-Type": "audio/wav",
     }
     params = {
-        "model": "whisper-large",
+        "model": "nova-2-phonecall",
+        "language": "en-US",
+        "smart_format": "true",
     }
 
     data = audiofile.read_bytes()
