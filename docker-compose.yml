@@ -9,9 +9,17 @@ services:
         - ./media/transcribe:/app/media/transcribe
         - ./destinations.csv:/app/destinations.csv:ro
         - ./models:/app/models
+        - ./cache:/home/mambauser/.cache
         #- /etc/timezone:/etc/timezone:ro
         - /etc/localtime:/etc/localtime:ro
       user: "1000"
       environment:
         #- TTT_WHISPERCPP_URL=${TTT_WHISPERCPP_URL}
         - HF_HOME=models
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: 1
+                capabilities: [gpu]
