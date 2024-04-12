@@ -12,6 +12,30 @@ import scrubadub
 import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
+# Before we dig in, let's globally set up transformers
+# We will load up the model, etc now so we only need to
+# use the PIPE constant in the function.
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+model_id = os.environ.get("TTT_TRANSFORMERS_MODEL_ID", "openai/whisper-large-v3")
+model = AutoModelForSpeechSeq2Seq.from_pretrained(
+    model_id,
+    torch_dtype=torch_dtype,
+    low_cpu_mem_usage=True,
+    use_safetensors=True,
+)
+model.to(device)
+processor = AutoProcessor.from_pretrained(model_id)
+PIPE = pipeline(
+    "automatic-speech-recognition",
+    model=model,
+    tokenizer=processor.tokenizer,
+    feature_extractor=processor.feature_extractor,
+    max_new_tokens=128,
+    torch_dtype=torch_dtype,
+    device=device,
+)
+
 
 def transcribe_call(destinations):
     """Transcribes audio files and sends notifications.
@@ -127,34 +151,8 @@ def transcribe_transformers(calljson, audiofile):
     """
     audiofile = str(audiofile)
 
-    # It'll run on CPU, but you'll want a smaller model and it's slow
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-
-    model_id = os.environ.get("TTT_TRANSFORMERS_MODEL_ID", "openai/whisper-large-v3")
-
-    model = AutoModelForSpeechSeq2Seq.from_pretrained(
-        model_id,
-        torch_dtype=torch_dtype,
-        low_cpu_mem_usage=True,
-        use_safetensors=True,
-    )
-    model.to(device)
-
-    processor = AutoProcessor.from_pretrained(model_id)
-
-    pipe = pipeline(
-        "automatic-speech-recognition",
-        model=model,
-        tokenizer=processor.tokenizer,
-        feature_extractor=processor.feature_extractor,
-        max_new_tokens=128,
-        torch_dtype=torch_dtype,
-        device=device,
-    )
-
     # Set the return argument to english
-    result = pipe(audiofile, generate_kwargs={"language": "english"})
+    result = PIPE(audiofile, generate_kwargs={"language": "english"})
     calljson["text"] = result["text"]
     return calljson
 
