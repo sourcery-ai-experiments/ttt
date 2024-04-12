@@ -127,7 +127,9 @@ def transcribe_transformers(calljson, audiofile):
     """
     audiofile = str(audiofile)
 
-    # It'll run on CPU, but you'll want a smaller model and it's slow
+    # When running on CPU, consider using a smaller model to reduce computational load and improve performance. 
+    # Smaller models require less memory and compute power, which is crucial since CPUs are significantly slower 
+    # at processing deep learning tasks compared to GPUs.
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
