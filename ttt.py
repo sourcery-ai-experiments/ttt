@@ -9,7 +9,8 @@ from pathlib import Path
 import apprise
 import requests
 import scrubadub
-from faster_whisper import WhisperModel
+import torch
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 
 def transcribe_call(destinations):
@@ -58,7 +59,7 @@ def transcribe_call(destinations):
         elif os.environ.get("TTT_WHISPERCPP_URL", False):
             calljson = transcribe_whispercpp(calljson, audiofile)
         else:
-            calljson = transcribe_fasterwhisper(calljson, audiofile)
+            calljson = transcribe_transformers(calljson, audiofile)
 
         # Ok, we have text back, send for notification
         send_notifications(calljson, destinations)
@@ -109,54 +110,52 @@ def transcribe_whispercpp(calljson, audiofile):
     return calljson
 
 
-def transcribe_fasterwhisper(calljson, audiofile):
-    """
-    Transcribes audio from a file using the FasterWhisper model.
+def transcribe_transformers(calljson, audiofile):
+    """Transcribes audio file using transformers library.
 
     Args:
-        calljson (dict): The JSON object containing the call information.
-        audiofile (str): The path to the audio file to be transcribed.
+        calljson (dict): A dictionary containing the JSON data.
+        audiofile (str): The path to the audio file.
 
     Returns:
-        dict: The updated calljson object with the transcribed text.
+        dict: The updated calljson dictionary with the transcript.
 
-    Examples:
-        >>> calljson = {"id": 1, "text": ""}
-        >>> audiofile = "/path/to/audio.wav"
-        >>> transcribe_fasterwhisper(calljson, audiofile)
-        {'id': 1, 'text': 'Transcribed text from the audio file'}
+    Explanation:
+        This function transcribes the audio file using the transformers library. It loads a pre-trained model
+        and processor, creates a pipeline for automatic speech recognition, and processes the audio file.
+        The resulting transcript is added to the calljson dictionary and returned.
     """
-    model_size = os.environ.get(
-        "TTT_FASTERWHISPER_MODEL_SIZE", "Systran/faster-whisper-large-v3"
-    )
-    device = os.environ.get("TTT_FASTERWHISPER_DEVICE", "cuda")
-    compute_type = os.environ.get("TTT_FASTERWHISPER_COMPUTE_TYPE", "auto")
-    vad_filter = os.environ.get("TTT_FASTERWHISPER_VAD_FILTER", False)
-    language = os.environ.get("TTT_FASTERWHISPER_LANGUAGE", None)
-
-    model = WhisperModel(
-        model_size, device=device, compute_type=compute_type, download_root="models"
-    )
-
-    # This whisper wants the path, not bytes but we need to cast it from pathlib to str
     audiofile = str(audiofile)
-    # We are going to set the vad parameters to half a second although env variable still turns
-    # vad off or on globally
-    segments, info = model.transcribe(
-        audiofile,
-        beam_size=5,
-        vad_filter=vad_filter,
-        vad_parameters=dict(min_silence_duration_ms=500),
-        language=language,
-        # This enhances distil models but is not required for "normal"
-        # Without it, distil models are bonkers.
-        condition_on_previous_text=False,
+
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
+    model_id = os.environ.get(
+        "TTT_TRANSFORMERS_MODEL_ID", "distil-whisper/distil-large-v3"
     )
 
-    calltext = "".join(segment.text for segment in segments)
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_id,
+        torch_dtype=torch_dtype,
+        low_cpu_mem_usage=True,
+        use_safetensors=True,
+    )
+    model.to(device)
 
-    calljson["text"] = calltext
+    processor = AutoProcessor.from_pretrained(model_id)
 
+    pipe = pipeline(
+        "automatic-speech-recognition",
+        model=model,
+        tokenizer=processor.tokenizer,
+        feature_extractor=processor.feature_extractor,
+        max_new_tokens=128,
+        torch_dtype=torch_dtype,
+        device=device,
+    )
+
+    result = pipe(audiofile)
+    calljson["text"] = result["text"]
     return calljson
 
 
