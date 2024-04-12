@@ -127,12 +127,13 @@ def transcribe_transformers(calljson, audiofile):
     """
     audiofile = str(audiofile)
 
+    # When running on CPU, consider using a smaller model to reduce computational load and improve performance. 
+    # Smaller models require less memory and compute power, which is crucial since CPUs are significantly slower 
+    # at processing deep learning tasks compared to GPUs.
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    model_id = os.environ.get(
-        "TTT_TRANSFORMERS_MODEL_ID", "distil-whisper/distil-large-v3"
-    )
+    model_id = os.environ.get("TTT_TRANSFORMERS_MODEL_ID", "openai/whisper-large-v3")
 
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         model_id,
@@ -154,7 +155,8 @@ def transcribe_transformers(calljson, audiofile):
         device=device,
     )
 
-    result = pipe(audiofile)
+    # Set the return argument to english
+    result = pipe(audiofile, generate_kwargs={"language": "english"})
     calljson["text"] = result["text"]
     return calljson
 
