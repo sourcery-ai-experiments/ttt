@@ -1,17 +1,13 @@
 name: base
 channels:
   - conda-forge
-  - pytorch
   - nvidia
 dependencies:
   - python=3.12
   - apprise
+  - libcublas
+  - cudnn
   - pip
   - pip:
     - scrubadub
-  - transformers
-  - accelerate
-  - pytorch 
-  - torchvision 
-  - torchaudio 
-  - pytorch-cuda=12.1
+    - faster-whisper
