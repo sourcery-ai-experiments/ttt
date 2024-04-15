@@ -235,24 +235,27 @@ def send_notifications(calljson, audiofile, destinations):
         + " @ "
         + str(datetime.fromtimestamp(calljson["start_time"]))
     )
-    # Convert these to str to be used with apprise
-    audiofile = str(audiofile)
     short_name = str(calljson["short_name"])
     talkgroup = str(calljson["talkgroup"])
     notify_url = destinations[short_name][talkgroup]
 
     # If TTT_ATTACH_AUDIO is set to True, attach it to apprise notification
-    if os.environ.get("TTT_ATTACH_AUDIO", False):
-        apobj = apprise.Apprise()
-        apobj.add(notify_url)
+    attach_audio = os.environ.get("TTT_ATTACH_AUDIO", "False").lower() in (
+        "true",
+        "1",
+        "t",
+    )
+    apobj = apprise.Apprise()
+    apobj.add(notify_url)
+    if attach_audio:
+        # Convert these to str to be used with apprise
+        audiofile = str(audiofile)
         apobj.notify(
             body=body,
             title=title,
             attach=audiofile,
         )
     else:
-        apobj = apprise.Apprise()
-        apobj.add(notify_url)
         apobj.notify(
             body=body,
             title=title,
