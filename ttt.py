@@ -86,7 +86,7 @@ def transcribe_call(destinations):
             calljson = transcribe_transformers(calljson, audiofile)
 
         # Ok, we have text back, send for notification
-        send_notifications(calljson, destinations)
+        send_notifications(calljson, audiofile, destinations)
 
         # And now delete the files from the transcribe directory
         Path.unlink(jsonfile)
@@ -209,22 +209,22 @@ def transcribe_deepgram(calljson, audiofile):
     return calljson
 
 
-def send_notifications(calljson, destinations):
-    """Sends notifications with transcribed text.
+def send_notifications(calljson, audiofile, destinations):
+    """
+    Sends notifications with the given call information and audio file.
 
     Args:
-        calljson (dict): A dictionary containing the call information.
-        destinations (dict): A dictionary containing destination URLs.
+        calljson (dict): The JSON object containing call information.
+        audiofile (str): The path to the audio file.
+        destinations (dict): A dictionary mapping short names and talkgroups to notification URLs.
+
+    Raises:
+        None
 
     Returns:
         None
-
-    Explanation:
-        This function cleans the transcribed text using the scrubadub library to remove personally identifiable
-        information (PII). It constructs a notification title based on the call information and sends the cleaned
-        text as the notification body. The notification is sent to the specified destination URLs using the
-        apprise library.
     """
+
     # Scrubadub redacts PII let's try and clean the text before
     # goes out the door
     scrubber = scrubadub.Scrubber()
@@ -235,17 +235,28 @@ def send_notifications(calljson, destinations):
         + " @ "
         + str(datetime.fromtimestamp(calljson["start_time"]))
     )
-
+    # Convert these to str to be used with apprise
+    audiofile = str(audiofile)
     short_name = str(calljson["short_name"])
     talkgroup = str(calljson["talkgroup"])
     notify_url = destinations[short_name][talkgroup]
 
-    apobj = apprise.Apprise()
-    apobj.add(notify_url)
-    apobj.notify(
-        body=body,
-        title=title,
-    )
+    # If TTT_ATTACH_AUDIO is set to True, attach it to apprise notification
+    if os.environ.get("TTT_ATTACH_AUDIO", False):
+        apobj = apprise.Apprise()
+        apobj.add(notify_url)
+        apobj.notify(
+            body=body,
+            title=title,
+            attach=audiofile,
+        )
+    else:
+        apobj = apprise.Apprise()
+        apobj.add(notify_url)
+        apobj.notify(
+            body=body,
+            title=title,
+        )
 
 
 def import_notification_destinations():
