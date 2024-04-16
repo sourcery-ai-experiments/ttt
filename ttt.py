@@ -276,7 +276,7 @@ def main():
         if not jsonlist:
             print("Empty queue. Sleep 5 seconds and check again.")
             time.sleep(5)
-            return ()
+            return
 
         for jsonfile in jsonlist:
             # Ok, let's grab the first json and pull it out and then the matching wav file
