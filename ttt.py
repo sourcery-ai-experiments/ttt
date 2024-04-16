@@ -241,7 +241,7 @@ def audio_notification(audiofile, apobj, body, title):
         "on",
         opusfile,
     ]
-    process = subprocess.run(ffmpeg_cmd, check=True)
+    subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
 
     opusfile = str(opusfile)
     apobj.notify(
