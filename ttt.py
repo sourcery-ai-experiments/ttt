@@ -156,7 +156,7 @@ def transcribe_deepgram(calljson, audiofile):
 
 def send_notifications(calljson, audiofile, destinations):
     """
-    Sends notifications with the given call information and audio file.
+    Sends notifications using the provided calljson, audiofile, and destinations.
 
     Args:
         calljson (dict): The JSON object containing call information.
@@ -168,6 +168,9 @@ def send_notifications(calljson, audiofile, destinations):
 
     Returns:
         None
+
+    Examples:
+        send_notifications(calljson, audiofile, destinations)
     """
 
     # Scrubadub redacts PII let's try and clean the text before
@@ -193,26 +196,61 @@ def send_notifications(calljson, audiofile, destinations):
     apobj = apprise.Apprise()
     apobj.add(notify_url)
     if attach_audio:
-        # Convert the wav to a much optimized opus and upload that
-        opusfile = Path(audiofile).with_suffix(".opus")
-        ffmpeg_cmd = f"ffmpeg -y -i {audiofile} -filter:a loudnorm=i=-14 -c:a libopus -application voip -cutoff 8000 -vbr on {opusfile}"
-        process = subprocess.run(ffmpeg_cmd, shell=True, capture_output=True, text=True)
-        if process.returncode != 0:
-            print(f"Error converting file: {process.stderr}")
-
-        apobj.notify(
-            body=body,
-            title=title,
-            attach=opusfile,
-        )
-        # Remove opusfile; audiofile and json unlinked later
-        Path.unlink(opusfile)
-
+        audio_notification(audiofile, apobj, body, title)
     else:
         apobj.notify(
             body=body,
             title=title,
         )
+
+
+def audio_notification(audiofile, apobj, body, title):
+    """
+    Notifies using the provided audiofile, apobj, body, and title.
+
+    Args:
+        audiofile (str): The path to the audio file.
+        apobj: The apprise object used for notifications.
+        body (str): The body of the notification.
+        title (str): The title of the notification.
+
+    Raises:
+        None
+
+    Returns:
+        None
+
+    Examples:
+        audio_notification(audiofile, apobj, body, title)
+    """
+    opusfile = Path(audiofile).with_suffix(".opus")
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        audiofile,
+        "-filter:a",
+        "loudnorm=i=-14",
+        "-c:a",
+        "libopus",
+        "-application",
+        "voip",
+        "-cutoff",
+        "8000",
+        "-vbr",
+        "on",
+        opusfile,
+    ]
+    process = subprocess.run(ffmpeg_cmd, check=True)
+
+    opusfile = str(opusfile)
+    apobj.notify(
+        body=body,
+        title=title,
+        attach=opusfile,
+    )
+    # Remove opusfile; audiofile and json unlinked later
+    Path.unlink(opusfile)
 
 
 def import_notification_destinations():
