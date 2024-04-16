@@ -196,7 +196,9 @@ def send_notifications(calljson, audiofile, destinations):
         # Convert the wav to a much optimized opus and upload that
         opusfile = Path(audiofile).with_suffix(".opus")
         ffmpeg_cmd = f"ffmpeg -y -i {audiofile} -filter:a loudnorm=i=-14 -c:a libopus -application voip -cutoff 8000 -vbr on {opusfile}"
-        subprocess.run(ffmpeg_cmd, shell=True)
+        process = subprocess.run(ffmpeg_cmd, shell=True, capture_output=True, text=True)
+        if process.returncode != 0:
+            print(f"Error converting file: {process.stderr}")
 
         apobj.notify(
             body=body,
