@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -35,62 +36,6 @@ PIPE = pipeline(
     torch_dtype=torch_dtype,
     device=device,
 )
-
-
-def transcribe_call(destinations):
-    """Transcribes audio files and sends notifications.
-
-    Args:
-        destinations (dict): A dictionary containing destination information.
-
-    Returns:
-        None
-
-    Explanation:
-        This function searches for JSON files in the "media/transcribe" directory, sorts them by creation time,
-        and transcribes the corresponding audio files. The transcription is performed using different methods
-        based on the environment variables set. After transcribing, the function sends notifications using the
-        transcribed text. Finally, the JSON and audio files are deleted.
-
-    """
-    # First lets search the media directory for all json, sorted by creation time
-    jsonlist = sorted(
-        Path("media/transcribe").rglob("*.[jJ][sS][oO][nN]"), key=os.path.getctime
-    )
-
-    # If the queue is empty, pause for 5 seconds and then restart polling
-    if not jsonlist:
-        print("Empty queue. Sleep 5 seconds and check again.")
-        time.sleep(5)
-        return ()
-
-    for jsonfile in jsonlist:
-        # Ok, let's grab the first json and pull it out and then the matching wav file
-        audiofile = Path(jsonfile).with_suffix(".wav")
-
-        print(f"Processing: {audiofile}")
-
-        # Now load the actual json data into calljson
-        calljson = jsonfile.read_text()
-        calljson = json.loads(calljson)
-
-        # Send the json and audiofile to a function to transcribe
-        # If TTT_DEEPGRAM_KEY is set, use deepgram, else
-        # if TTT_WHISPER_URL is set, use whisper.cpp else
-        # fasterwhisper
-        if os.environ.get("TTT_DEEPGRAM_KEY", False):
-            calljson = transcribe_deepgram(calljson, audiofile)
-        elif os.environ.get("TTT_WHISPERCPP_URL", False):
-            calljson = transcribe_whispercpp(calljson, audiofile)
-        else:
-            calljson = transcribe_transformers(calljson, audiofile)
-
-        # Ok, we have text back, send for notification
-        send_notifications(calljson, audiofile, destinations)
-
-        # And now delete the files from the transcribe directory
-        Path.unlink(jsonfile)
-        Path.unlink(audiofile)
 
 
 def transcribe_whispercpp(calljson, audiofile):
@@ -248,13 +193,21 @@ def send_notifications(calljson, audiofile, destinations):
     apobj = apprise.Apprise()
     apobj.add(notify_url)
     if attach_audio:
-        # Convert these to str to be used with apprise
-        audiofile = str(audiofile)
+        # Convert the wav to a much optimized opus and upload that
+        opusfile = Path(audiofile).with_suffix(".opus")
+        ffmpeg_cmd = f"ffmpeg -y -i {audiofile} -filter:a loudnorm=i=-14 -c:a libopus -application voip -cutoff 8000 -vbr on {opusfile}"
+        process = subprocess.run(ffmpeg_cmd, shell=True, capture_output=True, text=True)
+        if process.returncode != 0:
+            print(f"Error converting file: {process.stderr}")
+
         apobj.notify(
             body=body,
             title=title,
-            attach=audiofile,
+            attach=opusfile,
         )
+        # Remove opusfile; audiofile and json unlinked later
+        Path.unlink(opusfile)
+
     else:
         apobj.notify(
             body=body,
@@ -291,21 +244,67 @@ def import_notification_destinations():
 
 
 def main():
-    """Main entry point of the application.
+    """Runs the main loop for transcribing audio files and sending notifications.
+
+    Explanation:
+        This function imports the notification destinations, searches for JSON files in the "media/transcribe" directory,
+        transcribes the corresponding audio files using different methods based on environment variables,
+        sends notifications using the transcribed text and the audio files, and deletes the JSON and audio files.
+
+    Args:
+        None
 
     Returns:
         None
 
-    Explanation:
-        This function serves as the main loop of the application. It imports notification destinations using
-        the `import_notification_destinations` function and continuously calls the `transcribe_call` function
-        with the imported destinations. The loop runs indefinitely until the program is terminated.
+    Raises:
+        None
+
+    Examples:
+        None
     """
     # Import the apprise destinations to send calls
     destinations = import_notification_destinations()
 
     while 1:
-        transcribe_call(destinations)
+        # First lets search the media directory for all json, sorted by creation time
+        jsonlist = sorted(
+            Path("media/transcribe").rglob("*.[jJ][sS][oO][nN]"), key=os.path.getctime
+        )
+
+        # If the queue is empty, pause for 5 seconds and then restart polling
+        if not jsonlist:
+            print("Empty queue. Sleep 5 seconds and check again.")
+            time.sleep(5)
+            return
+
+        for jsonfile in jsonlist:
+            # Ok, let's grab the first json and pull it out and then the matching wav file
+            audiofile = Path(jsonfile).with_suffix(".wav")
+
+            print(f"Processing: {audiofile}")
+
+            # Now load the actual json data into calljson
+            calljson = jsonfile.read_text()
+            calljson = json.loads(calljson)
+
+            # Send the json and audiofile to a function to transcribe
+            # If TTT_DEEPGRAM_KEY is set, use deepgram, else
+            # if TTT_WHISPER_URL is set, use whisper.cpp else
+            # fasterwhisper
+            if os.environ.get("TTT_DEEPGRAM_KEY", False):
+                calljson = transcribe_deepgram(calljson, audiofile)
+            elif os.environ.get("TTT_WHISPERCPP_URL", False):
+                calljson = transcribe_whispercpp(calljson, audiofile)
+            else:
+                calljson = transcribe_transformers(calljson, audiofile)
+
+            # Ok, we have text back, send for notification
+            send_notifications(calljson, audiofile, destinations)
+
+            # And now delete the files from the transcribe directory
+            Path.unlink(jsonfile)
+            Path.unlink(audiofile)
 
 
 if __name__ == "__main__":
