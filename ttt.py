@@ -242,8 +242,6 @@ def audio_notification(audiofile, apobj, body, title):
         opusfile,
     ]
     process = subprocess.run(ffmpeg_cmd, check=True)
-    if process.returncode != 0:
-        print(f"Error converting file: {process.stderr}")
 
     apobj.notify(
         body=body,
