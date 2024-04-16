@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -192,13 +193,19 @@ def send_notifications(calljson, audiofile, destinations):
     apobj = apprise.Apprise()
     apobj.add(notify_url)
     if attach_audio:
-        # Convert these to str to be used with apprise
-        audiofile = str(audiofile)
+        # Convert the wav to a much optimized opus and upload that
+        opusfile = Path(audiofile).with_suffix(".opus")
+        ffmpeg_cmd = f"ffmpeg -y -i {audiofile} -filter:a loudnorm=i=-14 -c:a libopus -application voip -cutoff 8000 -vbr on {opusfile}"
+        subprocess.run(ffmpeg_cmd, shell=True)
+
         apobj.notify(
             body=body,
             title=title,
-            attach=audiofile,
+            attach=opusfile,
         )
+        # Remove opusfile; audiofile and json unlinked later
+        Path.unlink(opusfile)
+
     else:
         apobj.notify(
             body=body,
