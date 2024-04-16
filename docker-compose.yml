@@ -9,7 +9,7 @@ services:
         - ./media/transcribe:/app/media/transcribe
         - ./destinations.csv:/app/destinations.csv:ro
         - ./models:/app/models
-        - ./cache:/home/mambauser/.cache
+        - ./cache:/home/mambauser/.cache/torch/kernels 
         #- /etc/timezone:/etc/timezone:ro
         - /etc/localtime:/etc/localtime:ro
       user: "1000"
