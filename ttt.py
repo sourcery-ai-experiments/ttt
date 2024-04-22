@@ -235,6 +235,8 @@ def audio_notification(audiofile, apobj, body, title):
         "-c:a",
         "flac",
         flacfile,
+        "-compression_level",
+        "12",
     ]
     subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
 
