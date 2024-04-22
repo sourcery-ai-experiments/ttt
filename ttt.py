@@ -230,14 +230,14 @@ def audio_notification(audiofile, apobj, body, title):
         "-y",
         "-i",
         audiofile,
-        "-filter:a",
+        "-af",
+        "arnndn=m='/app/sh.rnnn'",
+        "-af",
         "loudnorm=i=-14",
         "-ar",
         "8000",
         "-c:a",
         "aac",
-        "-b",
-        "8000",
         aacfile,
     ]
     subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
