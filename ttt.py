@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import json
-import logging
 import os
 import subprocess
 import sys
@@ -14,8 +13,6 @@ import requests
 import scrubadub
 import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
-
-logging.basicConfig(stream=sys.stdout)
 
 # Before we dig in, let's globally set up transformers
 # We will load up the model, etc now so we only need to
@@ -71,9 +68,7 @@ def transcribe_whispercpp(calljson, audiofile):
         response = requests.post(f"{whisper_url}/inference", files=files)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        logging.error(
-            f"A request error occurred while trying to post to whisper.cpp: {e}"
-        )
+        print(f"A request error occurred while trying to post to whisper.cpp: {e}")
         raise RuntimeError(
             "A request error occurred while trying to post to whisper.cpp."
         ) from e
@@ -145,7 +140,7 @@ def transcribe_deepgram(calljson, audiofile):
         )
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        logging.error(f"A request error occurred while trying to post to Deepgram: {e}")
+        print(f"A request error occurred while trying to post to Deepgram: {e}")
         raise RuntimeError(
             "A request error occurred while trying to post to Deepgram."
         ) from e
@@ -318,7 +313,7 @@ def main():
 
         # If the queue is empty, pause for 5 seconds and then restart polling
         if not jsonlist:
-            logging.debug("Empty queue. Sleep 5 seconds and check again.")
+            print("Empty queue. Sleep 5 seconds and check again.")
             time.sleep(5)
             return
 
@@ -326,7 +321,7 @@ def main():
             # Ok, let's grab the first json and pull it out and then the matching wav file
             audiofile = Path(jsonfile).with_suffix(".wav")
 
-            logging.info(f"Processing: {audiofile}")
+            print(f"Processing: {audiofile}")
 
             # Now load the actual json data into calljson
             calljson = jsonfile.read_text()
