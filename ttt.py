@@ -232,6 +232,8 @@ def audio_notification(audiofile, apobj, body, title):
         audiofile,
         "-filter:a",
         "loudnorm=i=-14",
+        "-ar",
+        "8000",
         "-c:a",
         "aac",
         "-b",
