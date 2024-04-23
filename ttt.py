@@ -224,7 +224,7 @@ def audio_notification(audiofile, apobj, body, title):
     Examples:
         audio_notification(audiofile, apobj, body, title)
     """
-    opusfile = Path(audiofile).with_suffix(".opus")
+    flacfile = Path(audiofile).with_suffix(".flac")
     ffmpeg_cmd = [
         "ffmpeg",
         "-y",
@@ -233,25 +233,19 @@ def audio_notification(audiofile, apobj, body, title):
         "-filter:a",
         "loudnorm=i=-14",
         "-c:a",
-        "libopus",
-        "-application",
-        "voip",
-        "-cutoff",
-        "8000",
-        "-vbr",
-        "on",
-        opusfile,
+        "flac",
+        flacfile,
     ]
     subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
 
-    opusfile = str(opusfile)
+    flacfile = str(flacfile)
     apobj.notify(
         body=body,
         title=title,
-        attach=opusfile,
+        attach=flacfile,
     )
-    # Remove opusfile; audiofile and json unlinked later
-    Path.unlink(opusfile)
+    # Remove flacfile; audiofile and json unlinked later
+    Path.unlink(flacfile)
 
 
 def import_notification_destinations():
