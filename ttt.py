@@ -3,7 +3,6 @@
 import json
 import os
 import subprocess
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -250,13 +249,13 @@ def audio_notification(audiofile, apobj, body, title):
             attach=aacfile,
         )
         # Remove aacfile; audiofile and json unlinked later
-try:
-    Path(aacfile).unlink()
-except FileNotFoundError:
-    print(f"File {aacfile} not found.")
-except PermissionError:
-    print(f"No permission to delete {aacfile}.")
-    except CalledProcessError:
+        try:
+            Path(aacfile).unlink()
+        except FileNotFoundError:
+            print(f"File {aacfile} not found.")
+        except PermissionError:
+            print(f"No permission to delete {aacfile}.")
+    except subprocess.CalledProcessError:
         print(
             f"ffmpeg file conversion error with {aacfile}. We will skip audio on this file and post text only."
         )
@@ -354,8 +353,18 @@ def main():
             send_notifications(calljson, audiofile, destinations)
 
             # And now delete the files from the transcribe directory
-            Path.unlink(jsonfile)
-            Path.unlink(audiofile)
+            try:
+                Path(jsonfile).unlink()
+            except FileNotFoundError:
+                print(f"File {jsonfile} not found.")
+            except PermissionError:
+                print(f"No permission to delete {jsonfile}.")
+            try:
+                Path(audiofile).unlink()
+            except FileNotFoundError:
+                print(f"File {audiofile} not found.")
+            except PermissionError:
+                print(f"No permission to delete {audiofile}.")
 
 
 if __name__ == "__main__":
