@@ -230,6 +230,9 @@ def audio_notification(audiofile, apobj, body, title):
         ffmpeg_cmd = [
             "ffmpeg",
             "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
             "-i",
             audiofile,
             "-af",
@@ -242,7 +245,7 @@ def audio_notification(audiofile, apobj, body, title):
             "aac",
             aacfile,
         ]
-        subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.DEVNULL, timeout=30)
+        subprocess.run(ffmpeg_cmd, check=True, timeout=30)
 
         aacfile = str(aacfile)
         apobj.notify(
