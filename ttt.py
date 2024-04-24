@@ -250,7 +250,12 @@ def audio_notification(audiofile, apobj, body, title):
             attach=aacfile,
         )
         # Remove aacfile; audiofile and json unlinked later
-        Path.unlink(aacfile)
+try:
+    Path(aacfile).unlink()
+except FileNotFoundError:
+    print(f"File {aacfile} not found.")
+except PermissionError:
+    print(f"No permission to delete {aacfile}.")
     except CalledProcessError:
         print(
             "ffmpeg file conversion error. We will skip audio on this file and post text only."
