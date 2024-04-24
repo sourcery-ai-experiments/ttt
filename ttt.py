@@ -223,6 +223,8 @@ def audio_notification(audiofile, apobj, body, title):
     Examples:
         audio_notification(audiofile, apobj, body, title)
     """
+    # Try and except to handle ffmpeg encoding failures
+    # If it fails, just upload the text and skip the audio attachment
     try:
         aacfile = Path(audiofile).with_suffix(".m4a")
         ffmpeg_cmd = [
