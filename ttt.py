@@ -224,32 +224,41 @@ def audio_notification(audiofile, apobj, body, title):
     Examples:
         audio_notification(audiofile, apobj, body, title)
     """
-    aacfile = Path(audiofile).with_suffix(".m4a")
-    ffmpeg_cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        audiofile,
-        "-af",
-        "arnndn=m='/app/sh.rnnn'",
-        "-af",
-        "loudnorm=i=-14",
-        "-ar",
-        "8000",
-        "-c:a",
-        "aac",
-        aacfile,
-    ]
-    subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+    try:
+        aacfile = Path(audiofile).with_suffix(".m4a")
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            audiofile,
+            "-af",
+            "arnndn=m='/app/sh.rnnn'",
+            "-af",
+            "loudnorm=i=-14",
+            "-ar",
+            "8000",
+            "-c:a",
+            "aac",
+            aacfile,
+        ]
+        subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
 
-    aacfile = str(aacfile)
-    apobj.notify(
-        body=body,
-        title=title,
-        attach=aacfile,
-    )
-    # Remove aacfile; audiofile and json unlinked later
-    Path.unlink(aacfile)
+        aacfile = str(aacfile)
+        apobj.notify(
+            body=body,
+            title=title,
+            attach=aacfile,
+        )
+        # Remove aacfile; audiofile and json unlinked later
+        Path.unlink(aacfile)
+    except CalledProcessError:
+        print(
+            "ffmpeg file conversion error. We will skip audio on this file and post text only."
+        )
+        apobj.notify(
+            body=body,
+            title=title,
+        )
 
 
 def import_notification_destinations():
