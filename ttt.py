@@ -258,7 +258,7 @@ except PermissionError:
     print(f"No permission to delete {aacfile}.")
     except CalledProcessError:
         print(
-            "ffmpeg file conversion error. We will skip audio on this file and post text only."
+            f"ffmpeg file conversion error with {aacfile}. We will skip audio on this file and post text only."
         )
         apobj.notify(
             body=body,
