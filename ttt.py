@@ -3,7 +3,6 @@
 import json
 import os
 import subprocess
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -224,32 +223,48 @@ def audio_notification(audiofile, apobj, body, title):
     Examples:
         audio_notification(audiofile, apobj, body, title)
     """
-    aacfile = Path(audiofile).with_suffix(".m4a")
-    ffmpeg_cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        audiofile,
-        "-af",
-        "arnndn=m='/app/sh.rnnn'",
-        "-af",
-        "loudnorm=i=-14",
-        "-ar",
-        "8000",
-        "-c:a",
-        "aac",
-        aacfile,
-    ]
-    subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+    # Try and except to handle ffmpeg encoding failures
+    # If it fails, just upload the text and skip the audio attachment
+    try:
+        aacfile = Path(audiofile).with_suffix(".m4a")
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            audiofile,
+            "-af",
+            "arnndn=m='/app/sh.rnnn'",
+            "-af",
+            "loudnorm=i=-14",
+            "-ar",
+            "8000",
+            "-c:a",
+            "aac",
+            aacfile,
+        ]
+        subprocess.run(ffmpeg_cmd, check=True)
 
-    aacfile = str(aacfile)
-    apobj.notify(
-        body=body,
-        title=title,
-        attach=aacfile,
-    )
-    # Remove aacfile; audiofile and json unlinked later
-    Path.unlink(aacfile)
+        aacfile = str(aacfile)
+        apobj.notify(
+            body=body,
+            title=title,
+            attach=aacfile,
+        )
+        # Remove aacfile; audiofile and json unlinked later
+        try:
+            Path(aacfile).unlink()
+        except FileNotFoundError:
+            print(f"File {aacfile} not found.")
+        except PermissionError:
+            print(f"No permission to delete {aacfile}.")
+    except subprocess.CalledProcessError:
+        print(
+            f"ffmpeg file conversion error with {aacfile}. We will skip audio on this file and post text only."
+        )
+        apobj.notify(
+            body=body,
+            title=title,
+        )
 
 
 def import_notification_destinations():
@@ -340,8 +355,18 @@ def main():
             send_notifications(calljson, audiofile, destinations)
 
             # And now delete the files from the transcribe directory
-            Path.unlink(jsonfile)
-            Path.unlink(audiofile)
+            try:
+                Path(jsonfile).unlink()
+            except FileNotFoundError:
+                print(f"File {jsonfile} not found.")
+            except PermissionError:
+                print(f"No permission to delete {jsonfile}.")
+            try:
+                Path(audiofile).unlink()
+            except FileNotFoundError:
+                print(f"File {audiofile} not found.")
+            except PermissionError:
+                print(f"No permission to delete {audiofile}.")
 
 
 if __name__ == "__main__":
