@@ -242,7 +242,7 @@ def audio_notification(audiofile, apobj, body, title):
             "aac",
             aacfile,
         ]
-        subprocess.run(ffmpeg_cmd, check=True)
+        subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.DEVNULL, timeout=30)
 
         aacfile = str(aacfile)
         apobj.notify(
@@ -260,6 +260,14 @@ def audio_notification(audiofile, apobj, body, title):
     except subprocess.CalledProcessError:
         print(
             f"ffmpeg file conversion error with {aacfile}. We will skip audio on this file and post text only."
+        )
+        apobj.notify(
+            body=body,
+            title=title,
+        )
+    except subprocess.TimeoutExpired:
+        print(
+            f"ffmpeg file conversion error exceeded 30 seconds on {aacfile}. We will skip audio on this file and post text only."
         )
         apobj.notify(
             body=body,
