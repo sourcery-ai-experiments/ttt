@@ -3,11 +3,11 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jquagga/ttt/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jquagga/ttt)
 [![Docker](https://github.com/jquagga/ttt/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/jquagga/ttt/actions/workflows/docker-publish.yml)
 
-ttt is small python file which collects josn and wav file output from [trunk-recorder](https://github.com/robotastic/trunk-recorder) and uses Whisper.ai to convert speech to text. Essentially it is a "police scanner" which lets you read the conversation instead of just listening (but you can listen too if you like).
+ttt is small python file which collects json and wav file output from [trunk-recorder](https://github.com/robotastic/trunk-recorder) and uses Whisper.ai to convert speech to text. Essentially it is a "police scanner" which lets you read the conversation instead of just listening (but you can listen too if you like).
 
 Since the text is A.I. generated all of the usual disclaimers apply. It's not perfect but it does a reasonable job if the audio coming from the system you are monitoring is understandable.
 
-Presently, [www.pwcscanner.org](https://www.pwcscanner.org/) is running on ttt, serving notifications with opus attachments to a self-hosted [ntfy](https://github.com/binwiederhier/ntfy). Reception needs to be improved as the audio quality periodically drops and transcription quality suffers but I'm happy with the start.
+Presently, [www.pwcscanner.org](https://www.pwcscanner.org/) is running on ttt, serving notifications with ~~opus~~ AAC (to support Safari sadly) attachments to a self-hosted [ntfy](https://github.com/binwiederhier/ntfy). Reception needs to be improved as the audio quality periodically drops and transcription quality suffers but I'm happy with the start.
 
 ## Installation
 
