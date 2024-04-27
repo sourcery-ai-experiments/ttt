@@ -8,8 +8,7 @@ RUN micromamba install -y -n base -f /tmp/environment.yml && \
 
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 WORKDIR /app
-# This is the arrdn filter model hogwash for ffmpeg noise reduction
-copy sh.rnnn /app
+
 COPY ttt.py /app
 
 ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "python","-u","/app/ttt.py" ]

@@ -97,7 +97,7 @@ def transcribe_transformers(calljson, audiofile):
     audiofile = str(audiofile)
 
     # Set the return argument to english
-    #result = PIPE(audiofile, generate_kwargs={"language": "english"})
+    # result = PIPE(audiofile, generate_kwargs={"language": "english"})
     result = PIPE(audiofile)
     calljson["text"] = result["text"]
     return calljson
@@ -207,22 +207,20 @@ def send_notifications(calljson, audiofile, destinations):
 
 def audio_notification(audiofile, apobj, body, title):
     """
-    Notifies using the provided audiofile, apobj, body, and title.
+    Encode audio file to AAC format and send a notification with the audio attachment.
 
     Args:
-        audiofile (str): The path to the audio file.
-        apobj: The apprise object used for notifications.
-        body (str): The body of the notification.
-        title (str): The title of the notification.
-
-    Raises:
-        None
+        audiofile (str): Path to the input audio file.
+        apobj: Object used to send notifications.
+        body (str): Body of the notification.
+        title (str): Title of the notification.
 
     Returns:
         None
 
-    Examples:
-        audio_notification(audiofile, apobj, body, title)
+    Raises:
+        subprocess.CalledProcessError: If ffmpeg encoding fails.
+        subprocess.TimeoutExpired: If ffmpeg encoding exceeds 30 seconds.
     """
     # Try and except to handle ffmpeg encoding failures
     # If it fails, just upload the text and skip the audio attachment
@@ -236,12 +234,12 @@ def audio_notification(audiofile, apobj, body, title):
             "error",
             "-i",
             audiofile,
+            "-ac",
+            "1",
             "-af",
-            "arnndn=m='/app/sh.rnnn'",
-            "-af",
-            "loudnorm=i=-14",
-            "-ar",
-            "8000",
+            "highpass=f=200,lowpass=f=3000,anlmdn,loudnorm=i=-14",
+            "-b:a",
+            "64k",
             "-c:a",
             "aac",
             aacfile,
@@ -269,6 +267,10 @@ def audio_notification(audiofile, apobj, body, title):
             body=body,
             title=title,
         )
+        try:
+            Path(aacfile).unlink()
+        except FileNotFoundError:
+            print(f"File {aacfile} not found.")
     except subprocess.TimeoutExpired:
         print(
             f"ffmpeg file conversion error exceeded 30 seconds on {aacfile}. We will skip audio on this file and post text only."
@@ -277,6 +279,10 @@ def audio_notification(audiofile, apobj, body, title):
             body=body,
             title=title,
         )
+        try:
+            Path(aacfile).unlink()
+        except FileNotFoundError:
+            print(f"File {aacfile} not found.")
 
 
 def import_notification_destinations():
