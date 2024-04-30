@@ -9,7 +9,7 @@ dependencies:
   - ffmpeg
   - pip
   - pip:
-    - scrubadub
+    - better_profanity
   - transformers
   - accelerate
   - pytorch 
