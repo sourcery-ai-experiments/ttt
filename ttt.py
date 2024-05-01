@@ -10,14 +10,13 @@ from pathlib import Path
 import apprise
 import requests
 import torch
-
+from better_profanity import profanity
 from transformers import (
-    pipeline,
     AutoModelForCausalLM,
     AutoModelForSpeechSeq2Seq,
     AutoProcessor,
+    pipeline,
 )
-from better_profanity import profanity
 
 # Before we dig in, let's globally set up transformers
 # We will load up the model, etc now so we only need to
@@ -76,7 +75,10 @@ else:
         torch_dtype=torch_dtype,
         device=device,
     )
-profanity.load_censor_words()
+
+# If an ambulance is coming for you stroke is still a bad word,
+# we don't want to censor it in this case.
+profanity.load_censor_words(whitelist_words=["stroke"])
 
 
 def transcribe_transformers(calljson, audiofile):
