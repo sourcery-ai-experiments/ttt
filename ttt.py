@@ -9,7 +9,6 @@ from pathlib import Path
 
 import apprise
 import requests
-import scrubadub
 import torch
 
 from transformers import (
@@ -18,6 +17,7 @@ from transformers import (
     AutoModelForSpeechSeq2Seq,
     AutoProcessor,
 )
+from better_profanity import profanity
 
 # Before we dig in, let's globally set up transformers
 # We will load up the model, etc now so we only need to
@@ -76,6 +76,7 @@ else:
         torch_dtype=torch_dtype,
         device=device,
     )
+profanity.load_censor_words()
 
 
 def transcribe_transformers(calljson, audiofile):
@@ -121,11 +122,8 @@ def send_notifications(calljson, audiofile, destinations):
         send_notifications(calljson, audiofile, destinations)
     """
 
-    # Scrubadub redacts PII let's try and clean the text before
-    # goes out the door
-    scrubber = scrubadub.Scrubber()
-    scrubber.remove_detector("email")
-    body = scrubber.clean(calljson["text"])
+    # Run ai text through profanity filter
+    body = profanity.censor(calljson["text"])
     title = (
         calljson["talkgroup_description"]
         + " @ "
@@ -308,7 +306,7 @@ def main():
             # Send the json and audiofile to a function to transcribe
             # If TTT_DEEPGRAM_KEY is set, use deepgram, else
             # if TTT_WHISPER_URL is set, use whisper.cpp else
-            # fasterwhisper
+            # transformers
             if os.environ.get("TTT_DEEPGRAM_KEY", False):
                 calljson = transcribe_deepgram(calljson, audiofile)
             elif os.environ.get("TTT_WHISPERCPP_URL", False):
@@ -316,8 +314,12 @@ def main():
             else:
                 calljson = transcribe_transformers(calljson, audiofile)
 
-            # Ok, we have text back, send for notification
-            send_notifications(calljson, audiofile, destinations)
+            # When Whisper process a file with no speech, it tends to spit out "you"
+            # Just "you" and nothing else.
+            # So if the transcript is just "you", don't bother sending the notification,
+            # we will just delete the files and keep going to the next call.
+            if calljson["text"] != "you":
+                send_notifications(calljson, audiofile, destinations)
 
             # And now delete the files from the transcribe directory
             try:
