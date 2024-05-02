@@ -18,6 +18,10 @@ from transformers import (
     pipeline,
 )
 
+# Let's increase our nice value by 5.  We're important but let's not
+# impact system functionality overall.
+os.nice(5)
+
 # Before we dig in, let's globally set up transformers
 # We will load up the model, etc now so we only need to
 # use the PIPE constant in the function.
